@@ -1,12 +1,4 @@
-/**
- * Checks if the content of an element is the desired content
- *
- * @param content - The content to check
- * @returns Whether the content is the desired content
- */
-async function hasContent(content: Element, prompt: string) {
-  return content.textContent === prompt;
-}
+import { hasContent } from "./inference";
 
 /**
  * Gets the XPath of an element
@@ -46,17 +38,18 @@ async function findElementWithContent(
   prompt: string
 ): Promise<{ element: Element; xpath: string } | null> {
   for (const element of elements) {
-    if (await hasContent(element, prompt)) {
+    if ((await hasContent(element, prompt)) === "this") {
       return { element, xpath: getXPath(element) };
-    }
-
-    const childElements = Array.from(element.children);
-    if (childElements.length > 0) {
-      const found = await findElementWithContent(childElements, prompt);
-      if (found) {
-        return found;
+    } else if ((await hasContent(element, prompt)) === "child") {
+      const childElements = Array.from(element.children);
+      if (childElements.length > 0) {
+        const found = await findElementWithContent(childElements, prompt);
+        if (found) {
+          return found;
+        }
       }
     }
+    console.log("No element found with content", element.outerHTML);
   }
   return null;
 }
