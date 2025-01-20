@@ -1,3 +1,13 @@
+import Instructor from "@instructor-ai/instructor";
+import OpenAI from "openai";
+import { z } from "zod";
+
+const oai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY ?? undefined,
+  organization: process.env.OPENAI_ORG_ID ?? undefined,
+  baseURL: "http://localhost:11434/v1",
+});
+
 /**
  * Checks if the content of an element is the desired content
  *
@@ -9,22 +19,33 @@ export async function hasContent(
   content: Element,
   prompt: string
 ): Promise<"this" | "child" | "no"> {
-  // Check if this element's direct text content matches
-  const thisText = Array.from(content.childNodes)
-    .filter((node) => node.nodeType === 3) // Text nodes only
-    .map((node) => node.textContent?.trim())
-    .join(" ");
+  const llmPrompt = `Given the following HTML element:
+${content.outerHTML}
 
-  if (thisText.includes(prompt)) {
-    return "this";
-  }
+And this target text to find: "${prompt}"
 
-  // Check children
-  for (const child of Array.from(content.children)) {
-    if (child.textContent?.includes(prompt)) {
-      return "child";
+You must respond with exactly one of these words (no other text):
+"this" - if the target text is found directly in the element (not in child elements)
+"child" - if the target text is found in one of the child elements
+"no" - if the target text is not found at all`;
+
+  try {
+    const completion = await oai.chat.completions.create({
+      messages: [{ role: "user", content: llmPrompt }],
+      model: "llama3.2",
+      temperature: 0,
+    });
+
+    const response = completion.choices[0].message.content
+      ?.trim()
+      .toLowerCase();
+
+    if (response === "this" || response === "child" || response === "no") {
+      return response;
     }
+    throw new Error(`Invalid response: ${response}`);
+  } catch (error) {
+    console.error("Error during inference:", error);
+    return "no"; // fallback response
   }
-
-  return "no";
 }

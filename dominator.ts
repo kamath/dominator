@@ -39,17 +39,25 @@ async function findElementWithContent(
 ): Promise<{ element: Element; xpath: string } | null> {
   for (const element of elements) {
     if ((await hasContent(element, prompt)) === "this") {
+      console.log(
+        "Found element with content in",
+        element.tagName.toLowerCase()
+      );
       return { element, xpath: getXPath(element) };
     } else if ((await hasContent(element, prompt)) === "child") {
       const childElements = Array.from(element.children);
       if (childElements.length > 0) {
         const found = await findElementWithContent(childElements, prompt);
         if (found) {
+          console.log("CONTENT FOUND IN CHILD", element.innerHTML);
           return found;
         }
       }
     }
-    console.log("No element found with content", element.outerHTML);
+    console.log(
+      "No element found with content in",
+      element.tagName.toLowerCase()
+    );
   }
   return null;
 }
